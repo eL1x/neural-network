@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.special # sigmoid function
+import sys
 
 # Neural network class
 class NeuralNetwork():
@@ -26,8 +27,8 @@ class NeuralNetwork():
     # Train the neural network
     def train(self, inputs_list, tragets_list):
         # Convert lists to 2d arrays
-        inputs = np.array(inputs_list, ndim=2).T
-        targets = np.array(tragets_list, ndim=2).T
+        inputs = np.array(inputs_list, ndmin=2).T
+        targets = np.array(tragets_list, ndmin=2).T
 
          # Calculate inputs into hidden layer
         hidden_inputs = np.dot(self.wih, inputs)
@@ -69,5 +70,53 @@ class NeuralNetwork():
 
 
 if __name__ == "__main__":
-    n = NeuralNetwork(3, 3, 3, 0.3)
-    print(n.feed_forward([1.0, 0.5, -1.5]))
+    # Number of nodes in each layer
+    input_nodes = 28*28
+    hidden_nodes = 200
+    output_nodes = 10
+
+    # Learning rate
+    learning_rate = 0.1
+
+    # Istance of neural network
+    n = NeuralNetwork(input_nodes, hidden_nodes, output_nodes, learning_rate)
+    
+    
+    # Load the mnist training data
+    with open("mnist_dataset/mnist_train.csv", "r") as training_data_file:
+        training_data_records = training_data_file.readlines()
+
+    # Train the neural network
+    epochs = 5
+    for e in range(epochs):
+        print("# {0} epoch".format(e))
+        for record in training_data_records:
+            # print("#", end="")
+            all_values = record.split(',')
+            # Scale input to range 0.01 to 0.99
+            inputs = np.asfarray(all_values[1:]) / 255.0 * 0.99 + 0.01
+            targets = np.zeros(output_nodes) + 0.01
+            targets[int(all_values[0])] = 0.99
+            n.train(inputs, targets)
+            # sys.stdout.flush()
+
+    # Load the mnist test data
+    with open("mnist_dataset/mnist_test.csv", "r") as test_data_file:
+        test_data_records = test_data_file.readlines()
+
+    # Test the neural network
+    scorecard = []
+
+    for record in test_data_records:
+        all_values = record.split(',')
+        correct_label = int(all_values[0])
+        inputs = np.asfarray(all_values[1:]) / 255.0 * 0.99 + 0.01
+        outputs = n.feed_forward(inputs)
+        label = np.argmax(outputs)
+        if (label == correct_label):
+            scorecard.append(1)
+        else:
+            scorecard.append(0)
+
+    scorecard_array = np.asfarray(scorecard)
+    print("performance = ", scorecard_array.sum() / scorecard_array.size)
