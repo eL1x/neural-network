@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.special # sigmoid function
+import scipy.ndimage
 import sys
 
 # Neural network class
@@ -51,8 +52,8 @@ class NeuralNetwork():
         self.wih += self.l_rate * np.dot((hidden_errors * hidden_outputs * (1.0 - hidden_outputs)), np.transpose(inputs))
 
 
-    # 
-    def feed_forward(self, inputs_list):
+    # Return outputs from neural network
+    def feedforward(self, inputs_list):
         # Convert input list to 2d array
         inputs = np.array(inputs_list, ndmin=2).T
 
@@ -71,7 +72,7 @@ class NeuralNetwork():
 
 if __name__ == "__main__":
     # Number of nodes in each layer
-    input_nodes = 28*28
+    input_nodes = 28*28 # Images are 28x28 pixels
     hidden_nodes = 200
     output_nodes = 10
 
@@ -91,14 +92,20 @@ if __name__ == "__main__":
     for e in range(epochs):
         print("# {0} epoch".format(e))
         for record in training_data_records:
-            # print("#", end="")
             all_values = record.split(',')
             # Scale input to range 0.01 to 0.99
             inputs = np.asfarray(all_values[1:]) / 255.0 * 0.99 + 0.01
             targets = np.zeros(output_nodes) + 0.01
             targets[int(all_values[0])] = 0.99
+            
+            # Data augumentation - rotate by 10 and -10 degrees
+            inputs_rotated_p = scipy.ndimage.interpolation.rotate(inputs.reshape(28, 28), 10, cval=0.01, order=1, reshape=False)
+            inputs_rotated_m = scipy.ndimage.interpolation.rotate(inputs.reshape(28, 28), -10, cval=0.01, order=1, reshape=False)
+            
+            # Train on original and augumented data
             n.train(inputs, targets)
-            # sys.stdout.flush()
+            n.train(inputs_rotated_p.reshape(784), targets)
+            n.train(inputs_rotated_m.reshape(784), targets)
 
     # Load the mnist test data
     with open("mnist_dataset/mnist_test.csv", "r") as test_data_file:
@@ -111,7 +118,7 @@ if __name__ == "__main__":
         all_values = record.split(',')
         correct_label = int(all_values[0])
         inputs = np.asfarray(all_values[1:]) / 255.0 * 0.99 + 0.01
-        outputs = n.feed_forward(inputs)
+        outputs = n.feedforward(inputs)
         label = np.argmax(outputs)
         if (label == correct_label):
             scorecard.append(1)
@@ -120,3 +127,6 @@ if __name__ == "__main__":
 
     scorecard_array = np.asfarray(scorecard)
     print("performance = ", scorecard_array.sum() / scorecard_array.size)
+
+# TODO 
+# Refactor of train function - use feedforward
